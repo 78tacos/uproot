@@ -1,0 +1,496 @@
+<Window x:Class="Uproot.App.UninstallSessionWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:local="clr-namespace:Uproot.App"
+        xmlns:vm="clr-namespace:Uproot.App.ViewModels"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d"
+        d:DataContext="{d:DesignInstance Type=vm:UninstallSessionViewModel}"
+        Title="{Binding Title}" Height="780" Width="1020" MinHeight="560" MinWidth="760"
+        WindowStartupLocation="CenterOwner" Icon="Assets/app.ico"
+        Background="{DynamicResource Surface}"
+        TextOptions.TextFormattingMode="Ideal"
+        FontFamily="Segoe UI Variable Text, Segoe UI">
+
+    <Window.Resources>
+        <local:ToneToBackgroundConverter x:Key="ToneBg" />
+        <local:ToneToForegroundConverter x:Key="ToneFg" />
+        <local:PresenceToVisibilityConverter x:Key="Presence" />
+        <local:SmallGroupConverter x:Key="SmallGroup" />
+
+        <DataTemplate x:Key="ChipTemplate">
+            <Border Background="{Binding Tone, Converter={StaticResource ToneBg}}"
+                    CornerRadius="4" Padding="7,2" Margin="0,0,5,3"
+                    ToolTip="{Binding Explanation}" ToolTipService.InitialShowDelay="250">
+                <TextBlock Text="{Binding Text}" FontSize="10.5" FontWeight="SemiBold"
+                           Foreground="{Binding Tone, Converter={StaticResource ToneFg}}" />
+            </Border>
+        </DataTemplate>
+
+        <Style x:Key="Choice" TargetType="RadioButton">
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimary}" />
+            <Setter Property="FontSize" Value="13" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Margin" Value="0,8,0,0" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+        </Style>
+
+        <Style x:Key="ChoiceNote" TargetType="TextBlock" BasedOn="{StaticResource Body}">
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="Margin" Value="24,2,0,0" />
+        </Style>
+
+        <!-- A text-only button, for the per-group "All" and "None". -->
+        <Style x:Key="LinkButton" TargetType="Button">
+            <Setter Property="Foreground" Value="{DynamicResource Accent}" />
+            <Setter Property="FontSize" Value="11.5" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Margin" Value="10,0,0,0" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <TextBlock x:Name="Text" Text="{TemplateBinding Content}" Background="Transparent" />
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Text" Property="TextDecorations" Value="Underline" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="GroupToggle" TargetType="ToggleButton">
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Focusable" Value="False" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ToggleButton">
+                        <Border Background="Transparent">
+                            <ContentPresenter />
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="Callout" TargetType="Border">
+            <Setter Property="CornerRadius" Value="6" />
+            <Setter Property="Padding" Value="12,10" />
+            <Setter Property="Margin" Value="0,0,0,12" />
+        </Style>
+    </Window.Resources>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <!-- ===================== Header ===================== -->
+        <Border Background="{DynamicResource SurfacePanel}" Padding="22,16"
+                BorderBrush="{DynamicResource Divider}" BorderThickness="0,0,0,1">
+            <StackPanel>
+                <TextBlock Text="{Binding Title}" Style="{StaticResource H1}" TextWrapping="Wrap" />
+                <TextBlock Text="{Binding Subtitle}" Style="{StaticResource Body}" Margin="0,4,0,0" />
+            </StackPanel>
+        </Border>
+
+        <Grid Grid.Row="1">
+
+            <!-- ===================== Options ===================== -->
+            <ScrollViewer Padding="22,16" VerticalScrollBarVisibility="Auto"
+                          Visibility="{Binding IsOptions, Converter={StaticResource Presence}}">
+                <StackPanel MaxWidth="820" HorizontalAlignment="Left">
+
+                    <Border Style="{StaticResource Callout}" Background="{DynamicResource ToneWarningBg}"
+                            Visibility="{Binding ShowElevationWarning, Converter={StaticResource Presence}}">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="{Binding ElevationWarning}" TextWrapping="Wrap" FontSize="12.5"
+                                       Foreground="{DynamicResource ToneWarningFg}" VerticalAlignment="Center" />
+                            <Button Grid.Column="1" Content="Restart as admin" Style="{StaticResource GhostButton}"
+                                    Padding="10,5" Margin="12,0,0,0" Command="{Binding RestartAsAdminCommand}" />
+                        </Grid>
+                    </Border>
+
+                    <Border Style="{StaticResource Callout}" Background="{DynamicResource ToneWarningBg}"
+                            Visibility="{Binding ShowStillInstalledWarning, Converter={StaticResource Presence}}">
+                        <TextBlock TextWrapping="Wrap" FontSize="12.5" Foreground="{DynamicResource ToneWarningFg}"
+                                   Text="This program is still installed. Everything found will still be in use, and removing it is a forced removal that breaks the program rather than uninstalling it. Nothing will be pre-selected. Use Uninstall instead unless its uninstaller is missing or broken." />
+                    </Border>
+
+                    <TextBlock Text="{Binding FindingsHeading}" Style="{StaticResource SectionHeading}" Margin="0,0,0,8" />
+                    <ItemsControl ItemsSource="{Binding Findings}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate DataType="{x:Type vm:FindingViewModel}">
+                                <Grid Margin="0,0,0,8">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <Border Width="18" Height="18" CornerRadius="9" VerticalAlignment="Top" Margin="0,1,10,0"
+                                            Background="{Binding Tone, Converter={StaticResource ToneBg}}">
+                                        <TextBlock Text="{Binding Marker}" FontSize="10.5" FontWeight="Bold"
+                                                   HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                   Foreground="{Binding Tone, Converter={StaticResource ToneFg}}" />
+                                    </Border>
+                                    <TextBlock Grid.Column="1" Style="{StaticResource Body}" FontSize="12">
+                                        <Run Text="{Binding Title, Mode=OneWay}" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimary}" />
+                                        <Run Text="—" Foreground="{DynamicResource TextMuted}" />
+                                        <Run Text="{Binding Detail, Mode=OneWay}" />
+                                    </TextBlock>
+                                </Grid>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+
+                    <TextBlock Text="HOW HARD TO LOOK FOR LEFTOVERS" Style="{StaticResource SectionHeading}" />
+
+                    <RadioButton GroupName="Mode" Style="{StaticResource Choice}" Content="Safe" IsChecked="{Binding IsSafe}" />
+                    <TextBlock Style="{StaticResource ChoiceNote}"
+                               Text="Only what is provably the program's: its install folder, what its installer recorded, its own Publisher\Product folders and keys, and anything pointing into its folder — including PATH entries and firewall rules. Everything found is pre-selected." />
+
+                    <RadioButton GroupName="Mode" Style="{StaticResource Choice}" Content="Moderate (recommended)" IsChecked="{Binding IsModerate}" />
+                    <TextBlock Style="{StaticResource ChoiceNote}"
+                               Text="Also searches the usual places by name: Program Files, ProgramData, AppData, the Start menu, services, scheduled tasks, startup entries, and COM and file-type registrations pointing into its folder. Also the records Windows keeps about programs it has run, event log sources, and PATH entries and firewall rules for folders named after it." />
+
+                    <RadioButton GroupName="Mode" Style="{StaticResource Choice}" Content="Expert" IsChecked="{Binding IsExpert}" />
+                    <TextBlock Style="{StaticResource ChoiceNote}"
+                               Text="Also partial name matches, publisher folders, Temp and Documents, and a search for the install path across HKLM\SOFTWARE and HKCU\Software. Finds the most and needs the most care: uncertain items are never pre-selected. Takes up to a minute longer." />
+
+                    <TextBlock Text="WHERE TO LOOK" Style="{StaticResource SectionHeading}" />
+                    <CheckBox Content="{Binding AllProfilesLabel}" IsChecked="{Binding IncludeAllProfiles}"
+                              IsEnabled="{Binding IsElevated}" />
+                    <TextBlock Text="{Binding AllProfilesNote}" Style="{StaticResource ChoiceNote}" />
+
+                    <StackPanel Visibility="{Binding LeftoversOnly, Converter={StaticResource Presence}, ConverterParameter=Invert}">
+                        <TextBlock Text="BEFORE UNINSTALLING" Style="{StaticResource SectionHeading}" />
+
+                        <CheckBox Content="Create a System Restore point" IsChecked="{Binding CreateRestorePoint}"
+                                  IsEnabled="{Binding IsElevated}" />
+                        <TextBlock Text="{Binding RestorePointNote}" Style="{StaticResource ChoiceNote}" />
+
+                        <CheckBox Content="Run unattended where possible" IsChecked="{Binding RunUnattended}"
+                                  IsEnabled="{Binding CanRunUnattended}" Margin="0,10,0,0" />
+                        <TextBlock Text="{Binding UnattendedNote}" Style="{StaticResource ChoiceNote}"
+                                   FontFamily="Cascadia Mono, Consolas" FontSize="11" />
+                    </StackPanel>
+                </StackPanel>
+            </ScrollViewer>
+
+            <!-- ===================== Working ===================== -->
+            <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" MaxWidth="560"
+                        Visibility="{Binding IsBusy, Converter={StaticResource Presence}}">
+                <TextBlock Text="{Binding ProgressHeader}" Style="{StaticResource SectionHeading}" TextAlignment="Center" Margin="0,0,0,6"
+                           Visibility="{Binding ProgressHeader, Converter={StaticResource Presence}}" />
+                <TextBlock Text="{Binding ProgressText}" Style="{StaticResource H2}" TextWrapping="Wrap" TextAlignment="Center" />
+                <ProgressBar Height="3" Margin="0,14,0,0" IsIndeterminate="True"
+                             Background="{DynamicResource SurfaceRow}" Foreground="{DynamicResource Accent}" BorderThickness="0" />
+
+                <StackPanel Visibility="{Binding IsRunning, Converter={StaticResource Presence}}" Margin="0,18,0,0">
+                    <TextBlock Style="{StaticResource Body}" TextAlignment="Center" FontSize="12"
+                               Text="Uproot follows every process the uninstaller starts, including copies it relaunches from Temp, and waits for Windows Installer to finish before scanning." />
+                    <Button Content="Stop waiting and scan now" Style="{StaticResource GhostButton}" HorizontalAlignment="Center"
+                            Margin="0,12,0,0" Command="{Binding StopWaitingCommand}"
+                            ToolTip="For an uninstaller that leaves something running afterwards. The uninstaller itself is not stopped: killing it part-way would leave the program half removed." />
+                </StackPanel>
+
+                <Button Content="Cancel" Style="{StaticResource GhostButton}" HorizontalAlignment="Center" Margin="0,18,0,0"
+                        Command="{Binding CancelWorkCommand}"
+                        Visibility="{Binding IsRunning, Converter={StaticResource Presence}, ConverterParameter=Invert}" />
+            </StackPanel>
+
+            <!-- ===================== Results ===================== -->
+            <Grid Visibility="{Binding IsResults, Converter={StaticResource Presence}}">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
+
+                <Grid Margin="22,14,22,6">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Text="{Binding ResultSummary}" Style="{StaticResource H2}" VerticalAlignment="Center" TextWrapping="Wrap" />
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                        <TextBlock Text="Mode" Style="{StaticResource Body}" VerticalAlignment="Center" Margin="0,0,8,0" />
+                        <ComboBox Width="120" ItemsSource="{Binding Modes}" SelectedItem="{Binding Mode}" />
+                        <Button Content="Rescan" Style="{StaticResource GhostButton}" Padding="10,5" Margin="8,0,0,0"
+                                Command="{Binding RescanCommand}" ToolTip="Scan again, in the mode chosen here." />
+                    </StackPanel>
+                </Grid>
+
+                <ItemsControl Grid.Row="1" ItemsSource="{Binding Notes}" Margin="22,0,22,4">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Border Background="{DynamicResource ToneInfoBg}" CornerRadius="5" Padding="10,6" Margin="0,4,0,0">
+                                <TextBlock Text="{Binding}" TextWrapping="Wrap" FontSize="12" Foreground="{DynamicResource ToneInfoFg}" />
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+
+                <Grid Grid.Row="2" Margin="22,8,22,4">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Orientation="Horizontal">
+                        <Button Content="Select recommended" Style="{StaticResource GhostButton}" Padding="10,5" Margin="0,0,6,0"
+                                Command="{Binding SelectRecommendedCommand}" />
+                        <Button Content="Select all" Style="{StaticResource GhostButton}" Padding="10,5" Margin="0,0,6,0"
+                                Command="{Binding SelectAllCommand}"
+                                ToolTip="Everything that is not protected. Protected items are only ever selected one by one, or with their own group's Select all." />
+                        <Button Content="Select none" Style="{StaticResource GhostButton}" Padding="10,5"
+                                Command="{Binding SelectNoneCommand}" />
+                        <CheckBox Content="Allow removing protected items" IsChecked="{Binding AllowProtected}"
+                                  VerticalAlignment="Center" Margin="16,0,0,0"
+                                  Visibility="{Binding HasOverridable, Converter={StaticResource Presence}}"
+                                  ToolTip="Lets you select items that belong to or are shared with another program. You will be warned first. Anything that is part of Windows stays protected regardless." />
+                    </StackPanel>
+                    <TextBlock Grid.Column="1" Text="{Binding SelectedSummary}" Style="{StaticResource Body}" VerticalAlignment="Center" />
+                </Grid>
+
+                <ListBox Grid.Row="3" ItemsSource="{Binding LeftoversView}"
+                         Background="Transparent" BorderThickness="0"
+                         ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                         HorizontalContentAlignment="Stretch"
+                         VirtualizingPanel.IsVirtualizing="True"
+                         VirtualizingPanel.IsVirtualizingWhenGrouping="True"
+                         VirtualizingPanel.VirtualizationMode="Standard"
+                         Visibility="{Binding HasLeftovers, Converter={StaticResource Presence}}">
+                    <ListBox.GroupStyle>
+                        <GroupStyle>
+                            <GroupStyle.ContainerStyle>
+                                <Style TargetType="GroupItem">
+                                    <Setter Property="Template">
+                                        <Setter.Value>
+                                            <ControlTemplate TargetType="GroupItem">
+                                                <StackPanel>
+                                                    <Grid Margin="22,14,22,4">
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="*" />
+                                                            <ColumnDefinition Width="Auto" />
+                                                        </Grid.ColumnDefinitions>
+                                                        <ToggleButton x:Name="Toggle" Style="{StaticResource GroupToggle}"
+                                                                      IsChecked="{Binding ItemCount, Mode=OneTime, Converter={StaticResource SmallGroup}}">
+                                                            <StackPanel Orientation="Horizontal">
+                                                                <TextBlock x:Name="Chevron" Text="▾" Width="14" FontSize="12"
+                                                                           Foreground="{DynamicResource TextMuted}" VerticalAlignment="Center" />
+                                                                <TextBlock Text="{Binding Name}" FontSize="12" FontWeight="SemiBold"
+                                                                           Foreground="{DynamicResource TextPrimary}" />
+                                                                <TextBlock Text="{Binding ItemCount, StringFormat='  ({0})'}" FontSize="12"
+                                                                           Foreground="{DynamicResource TextMuted}" />
+                                                            </StackPanel>
+                                                        </ToggleButton>
+                                                        <StackPanel Grid.Column="1" Orientation="Horizontal">
+                                                            <Button Content="Select all" Style="{StaticResource LinkButton}"
+                                                                    Command="{Binding DataContext.SelectGroupCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"
+                                                                    CommandParameter="{Binding Name}" />
+                                                            <Button Content="None" Style="{StaticResource LinkButton}"
+                                                                    Command="{Binding DataContext.ClearGroupCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"
+                                                                    CommandParameter="{Binding Name}" />
+                                                        </StackPanel>
+                                                    </Grid>
+                                                    <ItemsPresenter x:Name="Items" />
+                                                </StackPanel>
+                                                <ControlTemplate.Triggers>
+                                                    <Trigger SourceName="Toggle" Property="IsChecked" Value="False">
+                                                        <Setter TargetName="Items" Property="Visibility" Value="Collapsed" />
+                                                        <Setter TargetName="Chevron" Property="Text" Value="▸" />
+                                                    </Trigger>
+                                                </ControlTemplate.Triggers>
+                                            </ControlTemplate>
+                                        </Setter.Value>
+                                    </Setter>
+                                </Style>
+                            </GroupStyle.ContainerStyle>
+                        </GroupStyle>
+                    </ListBox.GroupStyle>
+
+                    <ListBox.ItemContainerStyle>
+                        <Style TargetType="ListBoxItem">
+                            <Setter Property="Padding" Value="0" />
+                            <Setter Property="Margin" Value="22,3,18,0" />
+                            <Setter Property="Template">
+                                <Setter.Value>
+                                    <ControlTemplate TargetType="ListBoxItem">
+                                        <Border x:Name="Bd" Background="{DynamicResource SurfaceRow}" CornerRadius="6" Padding="10,8">
+                                            <ContentPresenter />
+                                        </Border>
+                                        <ControlTemplate.Triggers>
+                                            <Trigger Property="IsMouseOver" Value="True">
+                                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource SurfaceRowHover}" />
+                                            </Trigger>
+                                        </ControlTemplate.Triggers>
+                                    </ControlTemplate>
+                                </Setter.Value>
+                            </Setter>
+                        </Style>
+                    </ListBox.ItemContainerStyle>
+
+                    <ListBox.ItemTemplate>
+                        <DataTemplate DataType="{x:Type vm:LeftoverRowViewModel}">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+
+                                <CheckBox IsChecked="{Binding IsSelected}" IsEnabled="{Binding CanSelect}"
+                                          VerticalAlignment="Top" Margin="0,1,10,0" />
+
+                                <StackPanel Grid.Column="1">
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="{Binding KindName}" Style="{StaticResource Caption}"
+                                                   VerticalAlignment="Center" Margin="0,0,8,3" />
+                                        <ItemsControl ItemsSource="{Binding Chips}" ItemTemplate="{StaticResource ChipTemplate}">
+                                            <ItemsControl.ItemsPanel>
+                                                <ItemsPanelTemplate>
+                                                    <WrapPanel />
+                                                </ItemsPanelTemplate>
+                                            </ItemsControl.ItemsPanel>
+                                        </ItemsControl>
+                                    </StackPanel>
+                                    <TextBlock Text="{Binding Path}" TextWrapping="Wrap" FontFamily="Cascadia Mono, Consolas"
+                                               FontSize="11.5" Foreground="{DynamicResource TextPrimary}" />
+                                    <TextBlock Text="{Binding Detail}" Style="{StaticResource Caption}" TextWrapping="Wrap" Margin="0,3,0,0" />
+                                    <TextBlock Text="{Binding Caution}" Style="{StaticResource Caption}" TextWrapping="Wrap" Margin="0,2,0,0"
+                                               Foreground="{DynamicResource ToneWarningFg}"
+                                               Visibility="{Binding Caution, Converter={StaticResource Presence}}" />
+                                </StackPanel>
+
+                                <Button Grid.Column="2" Content="Show" Style="{StaticResource RowActionButton}" Padding="10,3"
+                                        VerticalAlignment="Top" Margin="10,0,0,0" FontSize="11.5"
+                                        ToolTip="Open it where it lives: Explorer for files, Registry Editor for keys."
+                                        Command="{Binding DataContext.OpenLocationCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"
+                                        CommandParameter="{Binding}" />
+                            </Grid>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+
+                <StackPanel Grid.Row="3" VerticalAlignment="Center" HorizontalAlignment="Center"
+                            Visibility="{Binding HasLeftovers, Converter={StaticResource Presence}, ConverterParameter=Invert}">
+                    <TextBlock Text="Nothing left behind" Style="{StaticResource H2}" HorizontalAlignment="Center" />
+                    <TextBlock Style="{StaticResource Body}" TextAlignment="Center" MaxWidth="380" Margin="0,6,0,0"
+                               Text="The uninstaller cleaned up after itself, as far as this mode looks. Expert mode searches further." />
+                </StackPanel>
+            </Grid>
+
+            <!-- ===================== Done ===================== -->
+            <Grid Visibility="{Binding IsDone, Converter={StaticResource Presence}}">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
+
+                <StackPanel Margin="22,16,22,6">
+                    <TextBlock Text="{Binding DoneSummary}" Style="{StaticResource H2}" TextWrapping="Wrap" />
+                    <Grid Margin="0,8,0,0" Visibility="{Binding BackupFolder, Converter={StaticResource Presence}}">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Style="{StaticResource Caption}" VerticalAlignment="Center" TextWrapping="Wrap">
+                            <Run Text="Backed up to" />
+                            <Run Text="{Binding BackupFolder, Mode=OneWay}" FontFamily="Cascadia Mono, Consolas" />
+                            <Run Text="with files in the Recycle Bin. Undo puts it all back now; Restore removed items in the main window can do it later." />
+                        </TextBlock>
+                        <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                            <Button Content="Undo this removal" Style="{StaticResource GhostButton}" Padding="10,4" Margin="12,0,0,0"
+                                    Command="{Binding UndoCommand}" />
+                            <Button Content="Open backup folder" Style="{StaticResource GhostButton}" Padding="10,4" Margin="8,0,0,0"
+                                    Command="{Binding OpenBackupCommand}" />
+                        </StackPanel>
+                    </Grid>
+                </StackPanel>
+
+                <ListBox Grid.Row="1" ItemsSource="{Binding Outcomes}" Background="Transparent" BorderThickness="0"
+                         ScrollViewer.HorizontalScrollBarVisibility="Disabled" HorizontalContentAlignment="Stretch">
+                    <ListBox.ItemContainerStyle>
+                        <Style TargetType="ListBoxItem">
+                            <Setter Property="Margin" Value="22,3,18,0" />
+                            <Setter Property="Template">
+                                <Setter.Value>
+                                    <ControlTemplate TargetType="ListBoxItem">
+                                        <Border Background="{DynamicResource SurfaceRow}" CornerRadius="6" Padding="10,7">
+                                            <ContentPresenter />
+                                        </Border>
+                                    </ControlTemplate>
+                                </Setter.Value>
+                            </Setter>
+                        </Style>
+                    </ListBox.ItemContainerStyle>
+                    <ListBox.ItemTemplate>
+                        <DataTemplate DataType="{x:Type vm:OutcomeRowViewModel}">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="92" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <ContentPresenter Content="{Binding Status}" ContentTemplate="{StaticResource ChipTemplate}"
+                                                  VerticalAlignment="Top" HorizontalAlignment="Left" />
+                                <StackPanel Grid.Column="1">
+                                    <TextBlock Text="{Binding Path}" TextWrapping="Wrap" FontFamily="Cascadia Mono, Consolas"
+                                               FontSize="11.5" Foreground="{DynamicResource TextPrimary}" />
+                                    <TextBlock Text="{Binding Message}" Style="{StaticResource Caption}" TextWrapping="Wrap" Margin="0,2,0,0" />
+                                </StackPanel>
+                            </Grid>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+            </Grid>
+        </Grid>
+
+        <!-- ===================== Footer ===================== -->
+        <Border Grid.Row="2" Background="{DynamicResource SurfacePanel}" Padding="22,12"
+                BorderBrush="{DynamicResource Divider}" BorderThickness="0,1,0,0">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+
+                <StackPanel VerticalAlignment="Center">
+                    <TextBlock Text="{Binding StatusText}" Style="{StaticResource Caption}" TextWrapping="Wrap"
+                               Foreground="{DynamicResource ToneWarningFg}"
+                               Visibility="{Binding StatusText, Converter={StaticResource Presence}}" />
+                    <TextBlock Style="{StaticResource Caption}" TextWrapping="Wrap" Foreground="{DynamicResource ToneWarningFg}"
+                               Text="Some selected items need administrator rights and will fail from this window. Restart as admin from the main window to remove them."
+                               Visibility="{Binding NeedsAdminForSelection, Converter={StaticResource Presence}}" />
+                </StackPanel>
+
+                <StackPanel Grid.Column="1" Orientation="Horizontal">
+                    <!-- Options -->
+                    <Button Content="Cancel" Style="{StaticResource GhostButton}" Margin="12,0,8,0" IsCancel="True" Click="OnClose"
+                            Visibility="{Binding IsOptions, Converter={StaticResource Presence}}" />
+                    <Button Content="{Binding StartButtonText}" Style="{StaticResource PrimaryButton}" MinWidth="120"
+                            Command="{Binding StartCommand}" IsDefault="True"
+                            Visibility="{Binding IsOptions, Converter={StaticResource Presence}}" />
+
+                    <!-- Results -->
+                    <Button Content="Close" Style="{StaticResource GhostButton}" Margin="12,0,8,0" Click="OnClose"
+                            Visibility="{Binding IsResults, Converter={StaticResource Presence}}" />
+                    <Button Content="{Binding RemoveButtonText}" Style="{StaticResource PrimaryButton}" MinWidth="150"
+                            Click="OnRemove"
+                            Visibility="{Binding IsResults, Converter={StaticResource Presence}}" />
+
+                    <!-- Done -->
+                    <Button Content="Close" Style="{StaticResource PrimaryButton}" MinWidth="100" Margin="12,0,0,0" Click="OnClose"
+                            Visibility="{Binding IsDone, Converter={StaticResource Presence}}" />
+                </StackPanel>
+            </Grid>
+        </Border>
+    </Grid>
+</Window>

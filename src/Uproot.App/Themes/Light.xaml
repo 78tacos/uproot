@@ -1,0 +1,54 @@
+<!--
+    Light palette. Mirrors every key in Dark.xaml.
+
+    The label tones are the part that needs care: a chip has to stay legible and keep its
+    meaning in both themes, so each tone pairs a pale tint with a saturated foreground rather
+    than simply inverting the dark values. Critical stays a filled red with white text in both,
+    because that one should look the same wherever you see it.
+-->
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <!-- Surfaces -->
+    <SolidColorBrush x:Key="Surface" Color="#FFF4F6F9" />
+    <SolidColorBrush x:Key="SurfacePanel" Color="#FFFFFFFF" />
+    <SolidColorBrush x:Key="SurfaceRow" Color="#FFFFFFFF" />
+    <SolidColorBrush x:Key="SurfaceRowHover" Color="#FFEDF0F5" />
+    <SolidColorBrush x:Key="SurfaceRowSelected" Color="#FFDDE8FA" />
+    <SolidColorBrush x:Key="Divider" Color="#FFD8DDE5" />
+
+    <!-- Text -->
+    <SolidColorBrush x:Key="TextPrimary" Color="#FF171A1F" />
+    <SolidColorBrush x:Key="TextSecondary" Color="#FF464D5B" />
+    <SolidColorBrush x:Key="TextMuted" Color="#FF6F7788" />
+
+    <!-- Accent -->
+    <SolidColorBrush x:Key="Accent" Color="#FF2A66D6" />
+    <SolidColorBrush x:Key="AccentHover" Color="#FF3A76E6" />
+    <SolidColorBrush x:Key="AccentPressed" Color="#FF2054B4" />
+    <SolidColorBrush x:Key="OnAccent" Color="#FFFFFFFF" />
+
+    <!-- Label tones -->
+    <SolidColorBrush x:Key="ToneNeutralBg" Color="#FFE8EBF0" />
+    <SolidColorBrush x:Key="ToneNeutralFg" Color="#FF4A5160" />
+    <SolidColorBrush x:Key="ToneInfoBg" Color="#FFDCE8FB" />
+    <SolidColorBrush x:Key="ToneInfoFg" Color="#FF184C9F" />
+    <SolidColorBrush x:Key="ToneSuccessBg" Color="#FFDAF1E1" />
+    <SolidColorBrush x:Key="ToneSuccessFg" Color="#FF15602C" />
+    <SolidColorBrush x:Key="ToneWarningBg" Color="#FFFAEBD3" />
+    <SolidColorBrush x:Key="ToneWarningFg" Color="#FF7D5104" />
+    <SolidColorBrush x:Key="ToneDangerBg" Color="#FFFBDEDC" />
+    <SolidColorBrush x:Key="ToneDangerFg" Color="#FF9C1F1A" />
+    <SolidColorBrush x:Key="ToneCriticalBg" Color="#FFC0332B" />
+    <SolidColorBrush x:Key="ToneCriticalFg" Color="#FFFFFFFF" />
+
+    <!-- Component-specific -->
+    <SolidColorBrush x:Key="ScrollThumb" Color="#FFC0C7D2" />
+    <SolidColorBrush x:Key="RowActionBg" Color="#FFEEF1F6" />
+    <SolidColorBrush x:Key="RowActionBorder" Color="#FFCFD6E0" />
+    <SolidColorBrush x:Key="CtaBg" Color="#FF1C7038" />
+    <SolidColorBrush x:Key="CtaBorder" Color="#FF15602E" />
+    <SolidColorBrush x:Key="CtaHover" Color="#FF238344" />
+    <SolidColorBrush x:Key="CtaPressed" Color="#FF155A2C" />
+
+</ResourceDictionary>

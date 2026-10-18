@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
+
+    <!--
+      A real console-subsystem executable, so a shell waits for it, pipes it, redirects it, and
+      gets an exit code that means something. Windows shells will not wait for a windowed
+      process, which Uproot.exe is.
+
+      Windows file names ignore case, so this cannot be uproot.exe beside Uproot.exe. It builds
+      as uproot-cli.exe, and publish.ps1 ships it as uproot.com: cmd and PowerShell both try .com
+      before .exe, so typing "uproot" runs this while double-clicking Uproot.exe opens the window.
+      Visual Studio's devenv.com and devenv.exe work the same way.
+    -->
+    <AssemblyName>uproot-cli</AssemblyName>
+    <UprootTitle>Uproot command line</UprootTitle>
+    <RootNamespace>Uproot.Cli</RootNamespace>
+    <InvariantGlobalization>true</InvariantGlobalization>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Uproot.Core\Uproot.Core.csproj" />
+  </ItemGroup>
+
+</Project>

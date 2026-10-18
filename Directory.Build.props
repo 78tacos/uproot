@@ -1,0 +1,21 @@
+<Project>
+
+  <!--
+    The version people see. Bump it for a release, commit, then tag that commit v$(VersionPrefix).
+    Every build between releases carries the version of the release it will become part of, and
+    is told apart from the others by its build number.
+
+    0.9.0: the code is WGUpdater's uninstaller, moved out whole, but nothing in it that needs
+    administrator rights has been run outside tests yet.
+  -->
+  <PropertyGroup>
+    <VersionPrefix>0.9.0</VersionPrefix>
+    <Product>Uproot</Product>
+    <Company>Uproot</Company>
+
+    <!-- The build number and commit are stamped by Directory.Build.targets, in a format the app
+         parses back. The SDK's own "+<40-character hash>" suffix would be appended to that. -->
+    <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
+  </PropertyGroup>
+
+</Project>

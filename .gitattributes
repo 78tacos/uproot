@@ -1,0 +1,16 @@
+# Normalise line endings so the repository does not depend on whoever cloned it.
+# Without this, Git's autocrlf setting decides, and the next person to open the
+# project can see every file as modified before they have touched anything.
+* text=auto eol=lf
+
+# These are read by Windows tooling that is happier with CRLF.
+*.ps1   text eol=crlf
+*.cmd   text eol=crlf
+*.bat   text eol=crlf
+*.slnx  text eol=crlf
+*.csproj text eol=crlf
+
+# Never line-ending-convert these.
+*.ico binary
+*.png binary
+*.exe binary

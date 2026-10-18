@@ -1,0 +1,300 @@
+<Window x:Class="Uproot.App.UninstallerWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:local="clr-namespace:Uproot.App"
+        xmlns:vm="clr-namespace:Uproot.App.ViewModels"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d"
+        d:DataContext="{d:DesignInstance Type=vm:UninstallerViewModel}"
+        Title="Uproot" Height="760" Width="1180" MinHeight="520" MinWidth="900"
+        Icon="Assets/app.ico"
+        Background="{DynamicResource Surface}"
+        TextOptions.TextFormattingMode="Ideal"
+        FontFamily="Segoe UI Variable Text, Segoe UI">
+
+    <Window.Resources>
+        <local:ToneToBackgroundConverter x:Key="ToneBg" />
+        <local:ToneToForegroundConverter x:Key="ToneFg" />
+        <local:PresenceToVisibilityConverter x:Key="Presence" />
+
+        <DataTemplate x:Key="ChipTemplate">
+            <Border Background="{Binding Tone, Converter={StaticResource ToneBg}}"
+                    CornerRadius="4" Padding="7,2.5" Margin="0,0,5,4"
+                    ToolTip="{Binding Explanation}" ToolTipService.InitialShowDelay="250">
+                <TextBlock Text="{Binding Text}" FontSize="11" FontWeight="SemiBold"
+                           Foreground="{Binding Tone, Converter={StaticResource ToneFg}}" />
+            </Border>
+        </DataTemplate>
+
+        <Style x:Key="FieldLabel" TargetType="TextBlock" BasedOn="{StaticResource Caption}">
+            <Setter Property="Margin" Value="0,8,0,2" />
+        </Style>
+
+        <Style x:Key="FieldValue" TargetType="TextBlock" BasedOn="{StaticResource Body}">
+            <Setter Property="FontFamily" Value="Cascadia Mono, Consolas" />
+            <Setter Property="FontSize" Value="11.5" />
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimary}" />
+        </Style>
+    </Window.Resources>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <!-- ===================== Header ===================== -->
+        <Border Grid.Row="0" Background="{DynamicResource SurfacePanel}" Padding="18,14"
+                BorderBrush="{DynamicResource Divider}" BorderThickness="0,0,0,1">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+
+                <StackPanel VerticalAlignment="Center">
+                    <TextBlock Text="Uninstall programs" Style="{StaticResource H1}" />
+                    <TextBlock Text="{Binding SummaryLine}" Style="{StaticResource Body}" Margin="0,2,0,0" />
+                </StackPanel>
+
+                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                    <Button Content="Restore removed items…" Style="{StaticResource GhostButton}"
+                            Margin="0,0,8,0" Click="OnRestore"
+                            ToolTip="Every removal is backed up. Put back registry items, tasks, services, PATH entries and firewall rules from their backups, and files from the Recycle Bin." />
+                    <Button Content="Find leftovers of a removed program…" Style="{StaticResource GhostButton}"
+                            Margin="0,0,8,0" Click="OnSearchByName"
+                            ToolTip="For a program that is no longer listed: search by its name, publisher and install folder for the files, keys, tasks and services it left behind." />
+                    <Button Content="Export list…" Style="{StaticResource GhostButton}" Margin="0,0,8,0" Click="OnExport"
+                            ToolTip="Save the programs shown, as filtered and sorted, to a CSV file." />
+                    <Button Content="Refresh" Style="{StaticResource GhostButton}" Command="{Binding RefreshCommand}" />
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <!-- ===================== Elevation notice ===================== -->
+        <Border Grid.Row="1" Background="{DynamicResource ToneWarningBg}" Padding="18,10"
+                BorderBrush="{DynamicResource Divider}" BorderThickness="0,0,0,1"
+                Visibility="{Binding ShowElevationNotice, Converter={StaticResource Presence}}">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+
+                <TextBlock VerticalAlignment="Center" Foreground="{DynamicResource ToneWarningFg}" FontSize="12.5" TextWrapping="Wrap"
+                           Text="Running as a standard user. Uninstallers still ask for rights themselves, but leftovers in Program Files, ProgramData, the machine-wide registry and other people's profiles can only be removed as administrator." />
+
+                <Button Grid.Column="1" Content="Restart as admin" Style="{StaticResource GhostButton}" Padding="10,5" Margin="12,0,0,0"
+                        Command="{Binding RelaunchAsAdminCommand}"
+                        ToolTip="{Binding RelaunchAsAdminTooltip}" />
+            </Grid>
+        </Border>
+
+        <!-- ===================== Running as another account ===================== -->
+        <!-- Shown only when elevated, so it never overlaps the standard-user notice above. -->
+        <Border Grid.Row="1" Background="{DynamicResource ToneDangerBg}" Padding="18,10"
+                BorderBrush="{DynamicResource Divider}" BorderThickness="0,0,0,1"
+                Visibility="{Binding ShowOtherAccountNotice, Converter={StaticResource Presence}}">
+            <TextBlock Text="{Binding OtherAccountNotice}" Foreground="{DynamicResource ToneDangerFg}" FontSize="12.5" TextWrapping="Wrap" />
+        </Border>
+
+        <!-- ===================== Filters ===================== -->
+        <Border Grid.Row="2" Padding="18,10" BorderBrush="{DynamicResource Divider}" BorderThickness="0,0,0,1">
+            <StackPanel Orientation="Horizontal">
+                <TextBox Width="320" Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged, Delay=150}"
+                         ToolTip="Filter by name, publisher or registry key" />
+                <ComboBox Width="210" Margin="12,0,0,0" ItemsSource="{Binding Filters}"
+                          DisplayMemberPath="Label" SelectedValuePath="Value" SelectedValue="{Binding Filter}" />
+                <TextBlock Text="Sort" Style="{StaticResource Body}" VerticalAlignment="Center" Margin="14,0,6,0" />
+                <ComboBox Width="140" ItemsSource="{Binding Sorts}"
+                          DisplayMemberPath="Label" SelectedValuePath="Value" SelectedValue="{Binding Sort}" />
+                <CheckBox Content="Show hidden entries" Margin="14,0,0,0" IsChecked="{Binding ShowSystemComponents}"
+                          ToolTip="Also list what Apps &amp; Features hides: system components, updates and the parts of bundles." />
+            </StackPanel>
+        </Border>
+
+        <!-- ===================== Body ===================== -->
+        <Grid Grid.Row="3">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" MinWidth="420" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="470" MinWidth="340" />
+            </Grid.ColumnDefinitions>
+
+            <ListBox ItemsSource="{Binding ProgramsView}" SelectedItem="{Binding Selected}"
+                     SelectionMode="Extended" SelectionChanged="OnProgramSelectionChanged"
+                     Background="Transparent" BorderThickness="0"
+                     ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                     HorizontalContentAlignment="Stretch"
+                     VirtualizingPanel.IsVirtualizing="True"
+                     VirtualizingPanel.VirtualizationMode="Recycling">
+                <ListBox.ContextMenu>
+                    <!-- With several programs selected only the action on all of them is offered:
+                         the others would act on whichever one happens to be first. -->
+                    <ContextMenu>
+                        <MenuItem Header="{Binding UninstallSelectedText}" Command="{Binding UninstallSelectedCommand}"
+                                  Visibility="{Binding IsMultiSelect, Converter={StaticResource Presence}}" />
+                        <MenuItem Header="Uninstall…" Command="{Binding UninstallCommand}"
+                                  Visibility="{Binding IsMultiSelect, Converter={StaticResource Presence}, ConverterParameter=Invert}" />
+                        <MenuItem Header="Remove leftovers only…" Command="{Binding LeftoversOnlyCommand}"
+                                  Visibility="{Binding IsMultiSelect, Converter={StaticResource Presence}, ConverterParameter=Invert}" />
+                        <Separator Visibility="{Binding IsMultiSelect, Converter={StaticResource Presence}, ConverterParameter=Invert}" />
+                        <MenuItem Header="Open install folder" Command="{Binding OpenInstallFolderCommand}"
+                                  Visibility="{Binding IsMultiSelect, Converter={StaticResource Presence}, ConverterParameter=Invert}" />
+                        <MenuItem Header="Open its registry entry" Command="{Binding OpenRegistryEntryCommand}"
+                                  Visibility="{Binding IsMultiSelect, Converter={StaticResource Presence}, ConverterParameter=Invert}" />
+                        <MenuItem Header="Copy name and version" Command="{Binding CopyNameCommand}"
+                                  Visibility="{Binding IsMultiSelect, Converter={StaticResource Presence}, ConverterParameter=Invert}" />
+                    </ContextMenu>
+                </ListBox.ContextMenu>
+                <ListBox.ItemContainerStyle>
+                    <Style TargetType="ListBoxItem">
+                        <Setter Property="Padding" Value="0" />
+                        <Setter Property="Margin" Value="12,5,10,0" />
+                        <Setter Property="Template">
+                            <Setter.Value>
+                                <ControlTemplate TargetType="ListBoxItem">
+                                    <Border x:Name="Bd" Background="{DynamicResource SurfaceRow}" CornerRadius="7" Padding="12,9"
+                                            BorderBrush="Transparent" BorderThickness="1">
+                                        <ContentPresenter />
+                                    </Border>
+                                    <ControlTemplate.Triggers>
+                                        <Trigger Property="IsMouseOver" Value="True">
+                                            <Setter TargetName="Bd" Property="Background" Value="{DynamicResource SurfaceRowHover}" />
+                                        </Trigger>
+                                        <Trigger Property="IsSelected" Value="True">
+                                            <Setter TargetName="Bd" Property="Background" Value="{DynamicResource SurfaceRowSelected}" />
+                                            <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource Accent}" />
+                                        </Trigger>
+                                    </ControlTemplate.Triggers>
+                                </ControlTemplate>
+                            </Setter.Value>
+                        </Setter>
+                    </Style>
+                </ListBox.ItemContainerStyle>
+
+                <ListBox.ItemTemplate>
+                    <DataTemplate DataType="{x:Type vm:ProgramRowViewModel}">
+                        <StackPanel>
+                            <TextBlock Text="{Binding Name}" Style="{StaticResource H2}" TextTrimming="CharacterEllipsis" />
+                            <TextBlock Text="{Binding Summary}" Style="{StaticResource Caption}" Margin="0,2,0,6"
+                                       TextTrimming="CharacterEllipsis" />
+                            <ItemsControl ItemsSource="{Binding Chips}" ItemTemplate="{StaticResource ChipTemplate}">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <WrapPanel />
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                            </ItemsControl>
+                        </StackPanel>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+
+            <GridSplitter Grid.Column="1" Width="1" HorizontalAlignment="Stretch" Background="{DynamicResource Divider}" />
+
+            <!-- ===================== Detail ===================== -->
+            <Border Grid.Column="2" Background="{DynamicResource SurfacePanel}">
+                <Grid>
+                    <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="18,14"
+                                  Visibility="{Binding Selected, Converter={StaticResource Presence}}">
+                        <StackPanel>
+                            <Border Background="{DynamicResource ToneInfoBg}" CornerRadius="6" Padding="12,10" Margin="0,0,0,14"
+                                    Visibility="{Binding IsMultiSelect, Converter={StaticResource Presence}}">
+                                <StackPanel>
+                                    <TextBlock Foreground="{DynamicResource ToneInfoFg}" FontSize="12.5" TextWrapping="Wrap"
+                                               Text="Several programs are selected. Their uninstallers run one after another, then a single scan covers what they all left." />
+                                    <Button Content="{Binding UninstallSelectedText}" Style="{StaticResource PrimaryButton}"
+                                            HorizontalAlignment="Left" Margin="0,10,0,0" Command="{Binding UninstallSelectedCommand}" />
+                                </StackPanel>
+                            </Border>
+
+                            <TextBlock Text="{Binding Selected.Name}" Style="{StaticResource H1}" TextWrapping="Wrap" />
+                            <TextBlock Text="{Binding Selected.Summary}" Style="{StaticResource Caption}" Margin="0,4,0,0" TextWrapping="Wrap" />
+
+                            <StackPanel Orientation="Horizontal" Margin="0,14,0,0">
+                                <Button Content="Uninstall…" Style="{StaticResource PrimaryButton}" Margin="0,0,8,0"
+                                        Command="{Binding UninstallCommand}"
+                                        ToolTip="Runs the program's own uninstaller, waits for it to finish properly, then scans for what it left behind. Nothing else is removed until you have reviewed it." />
+                                <Button Content="Remove leftovers only…" Style="{StaticResource GhostButton}" Margin="0,0,8,0"
+                                        Command="{Binding LeftoversOnlyCommand}"
+                                        ToolTip="Skips the uninstaller and scans straight away. For a program whose uninstaller is missing or broken, or that was already uninstalled but is still listed." />
+                                <Button Content="Open folder" Style="{StaticResource GhostButton}"
+                                        Command="{Binding OpenInstallFolderCommand}" />
+                            </StackPanel>
+
+                            <TextBlock Text="ENTRY" Style="{StaticResource SectionHeading}" />
+                            <TextBlock Text="{Binding Selected.Program.Id}" Style="{StaticResource FieldValue}" />
+
+                            <TextBlock Text="INSTALLED AT" Style="{StaticResource SectionHeading}" />
+                            <TextBlock Text="{Binding InstallLocationText}" Style="{StaticResource FieldValue}" />
+
+                            <TextBlock Text="UNINSTALLER" Style="{StaticResource SectionHeading}" />
+                            <TextBlock Text="{Binding AnalysisStatus}" Style="{StaticResource Caption}" />
+
+                            <StackPanel Visibility="{Binding Analysis, Converter={StaticResource Presence}}">
+                                <TextBlock Text="Registered command" Style="{StaticResource FieldLabel}" />
+                                <TextBlock Text="{Binding RegisteredCommandText}" Style="{StaticResource FieldValue}" />
+
+                                <StackPanel Visibility="{Binding RunCommandText, Converter={StaticResource Presence}}">
+                                    <TextBlock Text="What Uproot will run instead" Style="{StaticResource FieldLabel}" />
+                                    <TextBlock Text="{Binding RunCommandText}" Style="{StaticResource FieldValue}" />
+                                </StackPanel>
+
+                                <TextBlock Text="Unattended" Style="{StaticResource FieldLabel}" />
+                                <TextBlock Text="{Binding QuietCommandText}" Style="{StaticResource FieldValue}" />
+                            </StackPanel>
+
+                            <TextBlock Text="WHAT THE ANALYSIS FOUND" Style="{StaticResource SectionHeading}"
+                                       Visibility="{Binding Findings, Converter={StaticResource Presence}}" />
+                            <ItemsControl ItemsSource="{Binding Findings}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate DataType="{x:Type vm:FindingViewModel}">
+                                        <Grid Margin="0,0,0,10">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto" />
+                                                <ColumnDefinition Width="*" />
+                                            </Grid.ColumnDefinitions>
+                                            <Border Width="20" Height="20" CornerRadius="10" VerticalAlignment="Top" Margin="0,1,10,0"
+                                                    Background="{Binding Tone, Converter={StaticResource ToneBg}}">
+                                                <TextBlock Text="{Binding Marker}" FontSize="11" FontWeight="Bold"
+                                                           HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                           Foreground="{Binding Tone, Converter={StaticResource ToneFg}}" />
+                                            </Border>
+                                            <StackPanel Grid.Column="1">
+                                                <TextBlock Text="{Binding Title}" Style="{StaticResource Body}" FontWeight="SemiBold"
+                                                           Foreground="{DynamicResource TextPrimary}" />
+                                                <TextBlock Text="{Binding Detail}" Style="{StaticResource Body}" FontSize="12" Margin="0,2,0,0" />
+                                            </StackPanel>
+                                        </Grid>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+
+                            <Rectangle Height="16" Fill="Transparent" />
+                        </StackPanel>
+                    </ScrollViewer>
+
+                    <TextBlock Text="Select a program to see how its uninstaller works."
+                               Style="{StaticResource Body}" HorizontalAlignment="Center" VerticalAlignment="Center"
+                               Visibility="{Binding Selected, Converter={StaticResource Presence}, ConverterParameter=Invert}" />
+                </Grid>
+            </Border>
+        </Grid>
+
+        <!-- ===================== Status bar ===================== -->
+        <Border Grid.Row="4" Background="{DynamicResource SurfacePanel}" Padding="18,9"
+                BorderBrush="{DynamicResource Divider}" BorderThickness="0,1,0,0">
+            <StackPanel>
+                <TextBlock Text="{Binding StatusText}" Style="{StaticResource Body}" FontSize="12" />
+                <ProgressBar Height="2" Margin="0,6,0,0" IsIndeterminate="True"
+                             Background="{DynamicResource SurfaceRow}" Foreground="{DynamicResource Accent}" BorderThickness="0"
+                             Visibility="{Binding IsLoading, Converter={StaticResource Presence}}" />
+            </StackPanel>
+        </Border>
+    </Grid>
+</Window>

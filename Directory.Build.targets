@@ -1,0 +1,72 @@
+<Project>
+
+  <!--
+    Stamps every assembly with a build number and the commit it was built from.
+
+      FileVersion            0.9.0.57                 the fourth part is the build number
+      InformationalVersion   0.9.0+57.abc1234         read back by BuildInfo.Parse; ".dirty"
+                                                      is appended when built from uncommitted
+                                                      changes, "+local" when git is unavailable
+      FileDescription        Uproot 0.9.0 (build 57)
+
+    The build number is the number of commits in the history, so it only ever goes up along a
+    branch. CI must clone the full history (fetch-depth: 0): a shallow clone counts one commit.
+
+    A build number and commit can be passed in instead, which skips git entirely:
+      dotnet build -p:UprootBuildNumber=57 -p:UprootCommit=abc1234
+  -->
+
+  <PropertyGroup>
+    <UprootTitle Condition="'$(UprootTitle)' == ''">$(AssemblyName)</UprootTitle>
+  </PropertyGroup>
+
+  <Target Name="UprootReadGit" Condition="'$(UprootBuildNumber)' == ''">
+    <Exec Command="git rev-list --count HEAD" WorkingDirectory="$(MSBuildThisFileDirectory)"
+          ConsoleToMSBuild="true" IgnoreExitCode="true" EchoOff="true"
+          StandardOutputImportance="low" StandardErrorImportance="low">
+      <Output TaskParameter="ConsoleOutput" PropertyName="_UprootCommitCount" />
+      <Output TaskParameter="ExitCode" PropertyName="_UprootGitExit" />
+    </Exec>
+
+    <Exec Command="git rev-parse --short=7 HEAD" WorkingDirectory="$(MSBuildThisFileDirectory)"
+          Condition="'$(_UprootGitExit)' == '0' and '$(UprootCommit)' == ''"
+          ConsoleToMSBuild="true" IgnoreExitCode="true" EchoOff="true"
+          StandardOutputImportance="low" StandardErrorImportance="low">
+      <Output TaskParameter="ConsoleOutput" PropertyName="UprootCommit" />
+    </Exec>
+
+    <!-- Tracked files only: build output is ignored, and an untracked scratch file does not
+         change what was built. -->
+    <Exec Command="git status --porcelain --untracked-files=no" WorkingDirectory="$(MSBuildThisFileDirectory)"
+          Condition="'$(_UprootGitExit)' == '0'"
+          ConsoleToMSBuild="true" IgnoreExitCode="true" EchoOff="true"
+          StandardOutputImportance="low" StandardErrorImportance="low">
+      <Output TaskParameter="ConsoleOutput" PropertyName="_UprootUncommitted" />
+    </Exec>
+
+    <PropertyGroup Condition="'$(_UprootGitExit)' == '0'">
+      <UprootBuildNumber>$(_UprootCommitCount)</UprootBuildNumber>
+      <UprootDirty Condition="'$(_UprootUncommitted)' != ''">true</UprootDirty>
+    </PropertyGroup>
+  </Target>
+
+  <Target Name="UprootStampVersion" BeforeTargets="GetAssemblyVersion" DependsOnTargets="UprootReadGit">
+    <PropertyGroup>
+      <_UprootBuild>$(UprootBuildNumber)</_UprootBuild>
+      <_UprootBuild Condition="'$(_UprootBuild)' == ''">0</_UprootBuild>
+
+      <_UprootMeta>local</_UprootMeta>
+      <_UprootMeta Condition="'$(UprootBuildNumber)' != ''">$(UprootBuildNumber)</_UprootMeta>
+      <_UprootMeta Condition="'$(UprootBuildNumber)' != '' and '$(UprootCommit)' != ''">$(_UprootMeta).$(UprootCommit)</_UprootMeta>
+      <_UprootMeta Condition="'$(UprootDirty)' == 'true'">$(_UprootMeta).dirty</_UprootMeta>
+
+      <FileVersion>$(VersionPrefix).$(_UprootBuild)</FileVersion>
+      <InformationalVersion>$(VersionPrefix)+$(_UprootMeta)</InformationalVersion>
+
+      <!-- Shown by Task Manager and in the administrator prompt's details. -->
+      <AssemblyTitle>$(UprootTitle) $(VersionPrefix) (build $(_UprootBuild))</AssemblyTitle>
+      <AssemblyTitle Condition="'$(UprootBuildNumber)' == ''">$(UprootTitle) $(VersionPrefix) (local build)</AssemblyTitle>
+    </PropertyGroup>
+  </Target>
+
+</Project>
