@@ -154,6 +154,8 @@ public static class Installation
     /// </summary>
     public static string? ProblemWithFolder(string folder)
     {
+        folder = folder.TrimEnd(Path.DirectorySeparatorChar);
+
         foreach (var name in new[] { AppFile, CliFile })
         {
             var path = Path.Combine(folder, name);
