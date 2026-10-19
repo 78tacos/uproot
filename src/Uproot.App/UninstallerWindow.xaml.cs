@@ -33,6 +33,25 @@ public partial class UninstallerWindow : Window
         _viewModel.AfterSession(session.ChangedAnything);
     }
 
+    /// <summary>
+    /// Installs this copy for everyone, then offers to carry on from the installed one: that is the
+    /// copy the Start menu opens, and the one that restarts as administrator.
+    /// </summary>
+    private async void OnInstall(object sender, RoutedEventArgs e)
+    {
+        var installed = await InstallFlow.InstallAsync(this);
+        _viewModel.RefreshInstallState();
+        if (!installed) return;
+
+        var open = MessageBox.Show(this,
+            $"Uproot is installed in {Core.Installation.Folder}, with a Start menu shortcut, and \"uproot\" works in any new shell.\n\n"
+            + "Open the installed copy now? This one closes.",
+            "Uproot", MessageBoxButton.YesNo, MessageBoxImage.Information);
+
+        if (open == MessageBoxResult.Yes && InstallFlow.StartInstalled())
+            (Application.Current as App)?.ExitForRestart();
+    }
+
     private void OnProgramSelectionChanged(object sender, SelectionChangedEventArgs e) =>
         _viewModel.SetSelectedRows(((ListBox)sender).SelectedItems);
 

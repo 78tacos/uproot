@@ -83,6 +83,12 @@ public static class CliRunner
             case CliVerb.Uninstall:
                 return await ProgramCommands.UninstallAsync(options, ct).ConfigureAwait(false);
 
+            case CliVerb.SelfInstall:
+                return SetupCommands.SelfInstall(options);
+
+            case CliVerb.SelfUninstall:
+                return SetupCommands.SelfUninstall(options);
+
             default:
                 Console.Error.WriteLine(CommandLineParser.Usage);
                 return ExitCodes.UsageError;

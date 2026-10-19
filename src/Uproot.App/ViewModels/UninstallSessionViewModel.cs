@@ -85,7 +85,7 @@ public sealed class UninstallSessionViewModel : ObservableObject
         ClearGroupCommand = new RelayCommand(p => SelectGroup(p as string, false));
         OpenBackupCommand = RelayCommand.Create(OpenBackupFolder, () => _report?.BackupFolder is not null);
         OpenLocationCommand = new RelayCommand(p => OpenLocation(p as LeftoverRowViewModel));
-        RestartAsAdminCommand = RelayCommand.Create(RestartAsAdministrator, () => !IsElevated);
+        RestartAsAdminCommand = AsyncRelayCommand.Create(RestartAsAdministrator, () => !IsElevated);
         UndoCommand = AsyncRelayCommand.Create(UndoAsync, () => CanUndo);
     }
 
@@ -423,7 +423,7 @@ public sealed class UninstallSessionViewModel : ObservableObject
     public RelayCommand ClearGroupCommand { get; }
     public RelayCommand OpenBackupCommand { get; }
     public RelayCommand OpenLocationCommand { get; }
-    public RelayCommand RestartAsAdminCommand { get; }
+    public AsyncRelayCommand RestartAsAdminCommand { get; }
     public AsyncRelayCommand UndoCommand { get; }
 
     /// <summary>Asked before removing anything; the window shows the confirmation.</summary>
@@ -858,9 +858,9 @@ public sealed class UninstallSessionViewModel : ObservableObject
         }
     }
 
-    private void RestartAsAdministrator()
+    private async Task RestartAsAdministrator()
     {
-        var outcome = ElevationState.RelaunchAsAdministrator();
+        var outcome = await InstallFlow.RestartAsAdministratorAsync();
         StatusText = outcome.Message;
 
         if (outcome.Started) ExitRequested?.Invoke(this, EventArgs.Empty);

@@ -58,7 +58,7 @@ public sealed class UninstallerViewModel : ObservableObject
         ApplySort();
 
         RefreshCommand = AsyncRelayCommand.Create(LoadAsync, () => !IsLoading);
-        RelaunchAsAdminCommand = RelayCommand.Create(RelaunchAsAdministrator, () => !IsElevated);
+        RelaunchAsAdminCommand = AsyncRelayCommand.Create(RelaunchAsAdministrator, () => !IsElevated);
         OpenInstallFolderCommand = RelayCommand.Create(OpenInstallFolder, () => Analysis?.InstallLocation is not null);
         UninstallCommand = RelayCommand.Create(
             () => RequestSession(leftoversOnly: false),
@@ -75,7 +75,7 @@ public sealed class UninstallerViewModel : ObservableObject
     public ICollectionView ProgramsView { get; }
 
     public AsyncRelayCommand RefreshCommand { get; }
-    public RelayCommand RelaunchAsAdminCommand { get; }
+    public AsyncRelayCommand RelaunchAsAdminCommand { get; }
     public RelayCommand OpenInstallFolderCommand { get; }
     public RelayCommand UninstallCommand { get; }
     public RelayCommand LeftoversOnlyCommand { get; }
@@ -453,10 +453,39 @@ public sealed class UninstallerViewModel : ObservableObject
     internal static string? AccountBlock(InstalledProgram program) => ProgramOwner.WhyNotHere(program);
 
     /// <summary>What Restart as admin will do: for a standard user, it switches to the administrator account.</summary>
-    public string RelaunchAsAdminTooltip => AccountContext.Current.CanElevateAsSelf
-        ? "Closes Uproot and opens it again with administrator rights, back on this window."
+    public string RelaunchAsAdminTooltip => (AccountContext.Current.CanElevateAsSelf
+        ? "Closes Uproot and opens it again with administrator rights."
         : "Your account is a standard user, so this opens Uproot as the administrator account you sign in with. "
-          + "Programs installed for everyone, and that account's own, can be removed there; ones installed just for you cannot.";
+          + "Programs installed for everyone, and that account's own, can be removed there; ones installed just for you cannot.")
+        + (Installation.IsRunningInstalled() ? "" : _installed is not null
+            ? $" It opens the copy installed in {Installation.Folder}, which only administrators can change."
+            : " This copy is not installed, so it asks first whether to install it for everyone.");
+
+    private InstalledCopy? _installed = Installation.FindInstalled();
+
+    /// <summary>
+    /// Offered from a copy that is not the installed one, when installing it would change
+    /// something: there is no install yet, or this build is newer than the installed one.
+    /// </summary>
+    public bool ShowInstall => !Installation.IsRunningInstalled()
+                               && (_installed is null || _installed.Build is null || BuildInfo.Current.CompareTo(_installed.Build) > 0);
+
+    public string InstallLabel => _installed is null ? "Install for everyone…" : "Update the installed copy…";
+
+    public string InstallTooltip => _installed is null
+        ? $"Install this copy in {Installation.Folder}, which only administrators can change, with a Start menu shortcut, "
+          + "an Apps & Features entry and \"uproot\" on PATH. Restarting as administrator then uses that copy."
+        : $"Replace the installed {_installed.Build?.Display ?? "copy"} in {Installation.Folder} with this build, {BuildInfo.Current.Display}.";
+
+    /// <summary>Reads the install again, after one was made or changed.</summary>
+    public void RefreshInstallState()
+    {
+        _installed = Installation.FindInstalled();
+        Raise(nameof(ShowInstall));
+        Raise(nameof(InstallLabel));
+        Raise(nameof(InstallTooltip));
+        Raise(nameof(RelaunchAsAdminTooltip));
+    }
 
     public bool ShowOtherAccountNotice => AccountContext.Current.AsAnotherAccount;
 
@@ -604,9 +633,9 @@ public sealed class UninstallerViewModel : ObservableObject
         }
     }
 
-    private void RelaunchAsAdministrator()
+    private async Task RelaunchAsAdministrator()
     {
-        var outcome = ElevationState.RelaunchAsAdministrator();
+        var outcome = await InstallFlow.RestartAsAdministratorAsync();
         StatusText = outcome.Message;
 
         if (outcome.Started) ExitRequested?.Invoke(this, EventArgs.Empty);

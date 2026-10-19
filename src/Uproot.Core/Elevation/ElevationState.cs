@@ -27,14 +27,16 @@ public static class ElevationState
         : "Running as a standard user";
 
     /// <summary>
-    /// Restarts this executable with a UAC prompt. The caller is expected to shut down when
-    /// <see cref="RelaunchOutcome.Started"/> is true, since two instances must not run at once.
+    /// Restarts with a UAC prompt: this executable, or <paramref name="executable"/> when given —
+    /// the copy in Program Files, which only administrators can change. The caller is expected to
+    /// shut down when <see cref="RelaunchOutcome.Started"/> is true, since two instances must not
+    /// run at once.
     /// </summary>
-    public static RelaunchOutcome RelaunchAsAdministrator(params string[] arguments)
+    public static RelaunchOutcome RelaunchAsAdministrator(string? executable = null)
     {
         if (IsElevated) return new RelaunchOutcome(false, "Uproot is already running as administrator.");
 
-        var executable = ExecutablePath();
+        executable ??= ExecutablePath();
         if (executable is null)
             return new RelaunchOutcome(false, "Could not determine the path to Uproot.exe.");
 
@@ -44,8 +46,6 @@ public static class ElevationState
             UseShellExecute = true,   // required for the runas verb
             Verb = "runas"
         };
-
-        foreach (var argument in arguments) startInfo.ArgumentList.Add(argument);
 
         // Tells the new instance not to wait on a mutex the old one has not released yet.
         startInfo.ArgumentList.Add("--restarted");

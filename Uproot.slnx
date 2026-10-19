@@ -3,6 +3,7 @@
     <Project Path="src/Uproot.App/Uproot.App.csproj" />
     <Project Path="src/Uproot.Cli/Uproot.Cli.csproj" />
     <Project Path="src/Uproot.Core/Uproot.Core.csproj" />
+    <Project Path="src/Uproot.Setup/Uproot.Setup.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/Uproot.Core.Tests/Uproot.Core.Tests.csproj" />

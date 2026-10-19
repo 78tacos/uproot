@@ -13,15 +13,18 @@ and is now a program of its own. Removals WGUpdater made are listed and can be u
 
 ## Getting it
 
-Unzip a build anywhere and run `Uproot.exe`. There is no installer, and nothing is written to disk
-until something is removed.
+Uproot runs from wherever it is unzipped, or it can be installed for everyone on the PC.
 
-| Build | Needs |
-|---|---|
-| `Uproot-<version>-self-contained-win-x64.zip` | Nothing: runs on any Windows 10 or 11 x64 machine |
-| `Uproot-<version>-framework-dependent-win-x64.zip` | The .NET 10 Desktop Runtime (`winget install Microsoft.DotNet.DesktopRuntime.10`) |
+| Download | What it is | Needs |
+|---|---|---|
+| `Uproot-<version>-self-contained-win-x64.zip` | Portable | Nothing: runs on any Windows 10 or 11 x64 machine |
+| `Uproot-<version>-framework-dependent-win-x64.zip` | Portable, much smaller | The .NET 10 Desktop Runtime (`winget install Microsoft.DotNet.DesktopRuntime.10`) |
+| `Uproot-Setup-<version>-win-x64.exe` | Installs the framework-dependent build for everyone | The .NET 10 Desktop Runtime, and administrator rights |
 
-Each holds two files:
+Unzipped, Uproot writes nothing to disk until something is removed. See
+[Installing](#installing) for what an install adds and why you might want one.
+
+Each zip holds two files:
 
 | File | What it is |
 |---|---|
@@ -33,6 +36,54 @@ Windows file names ignore case, so the command line cannot be called `uproot.exe
 `uproot` in a shell opened in that folder (or with it on PATH) runs the command line, and
 double-clicking `Uproot.exe` opens the window. Visual Studio's `devenv.com` and `devenv.exe` work the
 same way.
+
+## Installing
+
+Installing is optional, and there is only one kind: for everyone, in `C:\Program Files\Uproot`.
+
+The reason to install is that Uproot often restarts itself with administrator rights, to clean up
+Program Files, `HKLM`, services and other people's profiles. A portable copy in Downloads or on the
+Desktop is a file any program running as you could replace before you answer the administrator
+prompt, and an unsigned program's prompt cannot show the difference. Program Files can only be
+changed by administrators, so the installed copy is safe to run elevated. A per-user install would
+sit in a folder you can change and solve nothing, so there isn't one.
+
+An install adds four things, and removing it takes away exactly those four:
+
+| What | Where |
+|---|---|
+| `Uproot.exe` and `uproot.com` | `C:\Program Files\Uproot` |
+| A Start menu shortcut | All users' Start menu |
+| An Apps & Features entry | `HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\Uproot` |
+| The folder on the machine PATH | So `uproot` works in any new shell |
+
+Three ways to install, all running the same code:
+
+- **Install for everyone…** in the header of a portable copy. It explains what it adds, asks for
+  administrator rights once, and offers to open the installed copy. From a copy newer than the
+  installed one, the button reads **Update the installed copy…**.
+- **`uproot self-install`** from a portable copy's folder. Run it from an administrator prompt to
+  skip the prompt.
+- **`Uproot-Setup.exe`**, which asks for administrator rights as it starts and unpacks straight into
+  Program Files: nothing it carries is written anywhere a standard account can change first.
+  `Uproot-Setup.exe --quiet` installs with no window, for Intune, ConfigMgr or a script, and reports
+  through its exit code (0 installed; 1 installed without the shortcut or PATH entry; 64 an
+  incomplete setup; 70 failed) and `setup.log` in the install folder.
+
+An update replaces the files in place. A copy that is open keeps running from the old files, which
+were renamed aside and go at the next install or restart.
+
+To remove it, use Apps & Features, or run `uproot self-uninstall` (`--quiet` for no dialogs, as
+Apps & Features' quiet uninstall does). It asks you to close Uproot first, and its own files go as
+soon as it exits. Backups of past removals are not part of the install and are kept.
+
+**Restart as admin** uses the installed copy whenever there is one, from any window. A portable
+copy with no install behind it, in a folder you can change, says so and offers three choices:
+install first and restart from Program Files (one administrator prompt for both), restart this copy
+anyway, or neither. A portable copy in a folder only administrators can change restarts as it is.
+
+Uproot does not offer to uninstall itself from its own list: that is Apps & Features' job, and the
+installed folder is never offered as anyone's leftover.
 
 ## The program list
 
@@ -221,7 +272,8 @@ which file belongs to which item, and are restored by hand from their folder.
 Uproot starts without them, and uninstallers ask for rights themselves. Leftovers in Program Files,
 ProgramData, `HKLM` and other people's profiles can only be removed as administrator, so the window
 says so before a machine-wide uninstall and offers **Restart as admin**, which asks once and opens
-Uproot again with them. A System Restore point can be created first when elevated; Windows allows
+Uproot again with them, from the installed copy when there is one (see [Installing](#installing)).
+A System Restore point can be created first when elevated; Windows allows
 one a day and the result says when it declined.
 
 When a standard user's administrator prompt is answered with another account's credentials, the
@@ -260,6 +312,8 @@ uproot leftovers <name> [--publisher X] [--folder F] [--mode safe|moderate|exper
 uproot uninstall <name> [--unattended] [--restore-point] [--mode …] [--all-users] [--clean] [--json]
 uproot backups [--json]
 uproot restore <name>|latest [--json]
+uproot self-install [--quiet]
+uproot self-uninstall [--quiet]
 uproot help
 uproot version
 ```
@@ -272,6 +326,8 @@ uproot version
 | `uninstall <name>` | Runs the program's own uninstaller, waits for it to finish, then scans for leftovers |
 | `backups` | Lists past removals, Uproot's and WGUpdater's, newest first |
 | `restore <name>\|latest` | Puts back what one removal took |
+| `self-install` | Installs this copy for everyone in Program Files, or repairs the install when run from it |
+| `self-uninstall` | Removes that install; what Apps & Features runs |
 
 `--clean` removes the Recommended items only, never protected ones. Running `leftovers --clean` on a
 program that is still installed is refused unless `--force` is added, for when its own uninstaller is
@@ -317,8 +373,10 @@ src/
     LeftoverSafety.cs     PathRules.cs  RegistryLinks.cs          what may never be removed
     LeftoverRemover.cs    RemovalBackup.cs  RecycleBin.cs         removing, with backups
     RemovalRestorer.cs    RegFile.cs                              putting things back
+    Installation.cs                                               installing Uproot itself for everyone
   Uproot.App/             the window (WPF)
   Uproot.Cli/             the console front end, shipped as uproot.com
+  Uproot.Setup/           Uproot-Setup.exe: the framework-dependent build, installed for everyone
 tests/
   Uproot.Core.Tests/      xunit; scanner and remover tests build a fake program in temp folders
                           and a test key under HKCU\Software\Uproot.Tests

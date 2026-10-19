@@ -95,7 +95,8 @@ public sealed record SafetyRules
 
         var own = new List<string>
         {
-            RemovalBackup.DataRoot, RemovalBackup.LegacyDefaultRoot, BackupTrust.AdminRoot, BackupTrust.LegacyAdminRoot
+            RemovalBackup.DataRoot, RemovalBackup.LegacyDefaultRoot, BackupTrust.AdminRoot, BackupTrust.LegacyAdminRoot,
+            Installation.Folder
         };
 
         var folders = new List<string>
@@ -317,7 +318,7 @@ public sealed class LeftoverSafety
             return SafetyVerdict.Always("A drive root.");
 
         if (_rules.OwnTrees.Any(t => PathRules.IsWithin(normalized, t)))
-            return SafetyVerdict.Always("Uproot's own data, or the backups it puts removed items back from.");
+            return SafetyVerdict.Always("Uproot's own files, or the backups it puts removed items back from.");
 
         if (IsInProtectedTree(normalized)) return SafetyVerdict.Always("Part of Windows or a location Windows manages.");
 

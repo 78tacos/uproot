@@ -2,13 +2,14 @@ using System.Windows;
 using System.Windows.Threading;
 using Uproot.App.Cli;
 using Uproot.App.ViewModels;
+using Uproot.Core;
 using Uproot.Core.Cli;
 
 namespace Uproot.App;
 
 public partial class App : Application
 {
-    private const string SingleInstanceMutexName = @"Local\Uproot.SingleInstance";
+    internal const string SingleInstanceMutexName = @"Local\Uproot.SingleInstance";
 
     private Mutex? _singleInstance;
 
@@ -16,7 +17,24 @@ public partial class App : Application
     {
         base.OnStartup(e);
 
+        // The elevated half of installing or removing Uproot: no window, no console, no mutex.
+        if (e.Args.Length > 0 && e.Args[0] is Installation.InstallElevatedSwitch or Installation.UninstallElevatedSwitch)
+        {
+            Environment.Exit(InstallFlow.RunElevatedStep(e.Args));
+            return;
+        }
+
         var commandLine = CommandLineParser.Parse(e.Args);
+
+        // Apps & Features runs Uproot.exe self-uninstall, with no console to talk through, so
+        // these two ask and report in dialogs. uproot.com does them in the console.
+        if (commandLine.Verb is CliVerb.SelfInstall or CliVerb.SelfUninstall)
+        {
+            Environment.Exit(commandLine.Verb == CliVerb.SelfInstall
+                ? InstallFlow.SelfInstall(commandLine.Quiet)
+                : InstallFlow.SelfUninstall(commandLine.Quiet));
+            return;
+        }
 
         if (commandLine.Verb != CliVerb.Gui)
         {

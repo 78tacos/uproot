@@ -17,6 +17,10 @@
 
       framework-dependent   Much smaller; needs the .NET 10 Desktop Runtime on the machine.
 
+    With the framework-dependent flavour it also builds Uproot-Setup-<version>.<build>-<runtime>.exe
+    in OutputRoot: one file that installs that build for everyone, in Program Files, or updates
+    the installed copy, through the same code as the app's Install button.
+
     Trimming is deliberately not enabled: WPF does not support it, and the reflection the XAML
     loader performs would break at runtime rather than at publish time.
 
@@ -178,12 +182,68 @@ function Publish-Flavour {
         New-ReleaseZip -SourceDirectory $outDir -ZipPath $zipPath
     }
 
-    [pscustomobject]@{ Flavour = $Name; Build = $appVersion.ProductVersion; Path = $exe; Zip = $zipPath }
+    [pscustomobject]@{ Flavour = $Name; Build = $appVersion.ProductVersion; Path = $exe; Zip = $zipPath; Folder = $outDir; Setup = $null }
+}
+
+<#
+    Uproot-Setup.exe, carrying the framework-dependent build as a zip inside it. It needs the
+    .NET 10 Desktop Runtime, as what it installs does; on a machine without it, the self-contained
+    zip's Install for everyone does the same install.
+#>
+function Publish-Setup {
+    param([Parameter(Mandatory)]$Payload)
+
+    Write-Host ""
+    Write-Host "=== setup ($Runtime) ===" -ForegroundColor Cyan
+
+    $setupProject = Join-Path $PSScriptRoot 'src\Uproot.Setup\Uproot.Setup.csproj'
+    $setupDir = Join-Path $OutputRoot "setup\$Runtime"
+
+    # The release zip when one was made, so setup carries exactly what is published beside it.
+    $payloadZip = $Payload.Zip
+    $temporaryZip = $null
+    if (-not $payloadZip) {
+        $temporaryZip = Join-Path $OutputRoot "setup-payload-$Runtime.zip"
+        New-ReleaseZip -SourceDirectory $Payload.Folder -ZipPath $temporaryZip
+        $payloadZip = $temporaryZip
+    }
+
+    try {
+        if (Test-Path $setupDir) { Get-ChildItem $setupDir -Force | Remove-Item -Recurse -Force -ErrorAction Stop }
+
+        & dotnet publish $setupProject -c Release -r $Runtime -o $setupDir --nologo `
+            -p:SelfContained=false -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true `
+            -p:DebugType=none -p:GenerateDocumentationFile=false -p:SatelliteResourceLanguages=en `
+            "-p:SetupPayload=$payloadZip" | Out-Host
+        if ($LASTEXITCODE -ne 0) { throw "dotnet publish failed for the setup (exit $LASTEXITCODE)" }
+    }
+    finally {
+        if ($temporaryZip -and (Test-Path $temporaryZip)) { Remove-Item $temporaryZip -Force }
+    }
+
+    $built = Join-Path $setupDir 'Uproot-Setup.exe'
+    if (-not (Test-Path $built)) { throw "Expected $built to exist after publish" }
+
+    # The setup must be the build it carries, or its window would name the wrong one.
+    $setupVersion = (Get-Item $built).VersionInfo
+    if ($setupVersion.ProductVersion -ne $Payload.Build) {
+        throw "Uproot-Setup.exe is $($setupVersion.ProductVersion) but carries $($Payload.Build)"
+    }
+
+    $setupPath = Join-Path $OutputRoot "Uproot-Setup-$($setupVersion.FileVersion)-$Runtime.exe"
+    Copy-Item $built $setupPath -Force
+    Write-Host ("  {0}  {1:N1} MB, carries {2}" -f (Split-Path $setupPath -Leaf), ((Get-Item $setupPath).Length / 1MB), $Payload.Build) -ForegroundColor Green
+
+    $Payload.Setup = $setupPath
 }
 
 $results = @()
 if ($Flavour -in @('both', 'self-contained')) { $results += Publish-Flavour -Name 'self-contained' -SelfContained $true }
-if ($Flavour -in @('both', 'framework-dependent')) { $results += Publish-Flavour -Name 'framework-dependent' -SelfContained $false }
+if ($Flavour -in @('both', 'framework-dependent')) {
+    $frameworkDependent = Publish-Flavour -Name 'framework-dependent' -SelfContained $false
+    Publish-Setup -Payload $frameworkDependent
+    $results += $frameworkDependent
+}
 
 $objDir = Join-Path $OutputRoot 'obj'
 if ((Test-Path $objDir) -and -not (Get-ChildItem $objDir -Force)) { Remove-Item $objDir -Force }
@@ -191,8 +251,10 @@ if ((Test-Path $objDir) -and -not (Get-ChildItem $objDir -Force)) { Remove-Item 
 Write-Host ""
 Write-Host "=== Done ===" -ForegroundColor Cyan
 $results | Format-Table Flavour, Build, Path, Zip -AutoSize | Out-String | Write-Host
+$results | Where-Object Setup | ForEach-Object { Write-Host "Setup: $($_.Setup)" -ForegroundColor Green }
 
-Write-Host "The framework-dependent build needs the .NET 10 Desktop Runtime:" -ForegroundColor DarkGray
+Write-Host "The framework-dependent build and the setup need the .NET 10 Desktop Runtime:" -ForegroundColor DarkGray
 Write-Host "  winget install Microsoft.DotNet.DesktopRuntime.10" -ForegroundColor DarkGray
 Write-Host ""
-Write-Host "Both run from wherever they are unzipped and write nothing until something is removed." -ForegroundColor DarkGray
+Write-Host "The zips run from wherever they are unzipped and write nothing until something is removed." -ForegroundColor DarkGray
+Write-Host "Install for everyone (in the window, uproot self-install, or the setup) puts Uproot in Program Files." -ForegroundColor DarkGray

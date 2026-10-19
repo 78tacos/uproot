@@ -79,7 +79,13 @@ public enum CliVerb
     Backups,
 
     /// <summary>Put back what a past removal took.</summary>
-    Restore
+    Restore,
+
+    /// <summary>Install Uproot itself for everyone, in Program Files.</summary>
+    SelfInstall,
+
+    /// <summary>Remove the install for everyone. What Apps &amp; Features runs.</summary>
+    SelfUninstall
 }
 
 public static class CommandLineParser
@@ -235,6 +241,9 @@ public static class CommandLineParser
         if ((allUsers || scanMode != ScanMode.Moderate) && verb is not (CliVerb.Leftovers or CliVerb.Uninstall))
             return Fail("--mode and --all-users only apply to leftovers and uninstall.");
 
+        if (json && verb is CliVerb.SelfInstall or CliVerb.SelfUninstall)
+            return Fail("--json does not apply to self-install and self-uninstall.");
+
         return new CommandLineOptions
         {
             Verb = verb,
@@ -263,6 +272,8 @@ public static class CommandLineParser
         "uninstall" or "--uninstall-program" => CliVerb.Uninstall,
         "backups" or "--backups" => CliVerb.Backups,
         "restore" or "--restore" => CliVerb.Restore,
+        "self-install" => CliVerb.SelfInstall,
+        "self-uninstall" => CliVerb.SelfUninstall,
         _ => null
     };
 
@@ -296,6 +307,14 @@ public static class CommandLineParser
                                              rules from its backups, and files from the Recycle Bin.
           help                               Show this text.
           version                            Print the version, build number and commit.
+
+        INSTALLING UPROOT
+          self-install [--quiet]             Install this copy for everyone: Program Files, a Start
+                                             menu shortcut, PATH and Apps & Features. Asks for
+                                             administrator rights once. Run it again to repair.
+          self-uninstall [--quiet]           Remove that install. Backups of past removals stay.
+          Restarting as administrator always uses the installed copy when there is one, since
+          only administrators can change it.
 
         SCAN OPTIONS (leftovers and uninstall)
           --mode safe|moderate|expert        How hard to look (default moderate). Safe finds only

@@ -48,6 +48,11 @@ public static class ProgramOwner
     /// <summary>Why the program cannot be uninstalled from here, or null when it can.</summary>
     public static string? WhyNotHere(InstalledProgram program)
     {
+        // Its own uninstaller is this program, and a scan for its leftovers would be looking at
+        // the files it is running from.
+        if (Installation.IsThisProgram(program))
+            return "This is Uproot itself. Remove it from Apps & Features, or run uproot self-uninstall.";
+
         var account = AccountContext.Current;
         if (RunsAsOwner(program, account.AsAnotherAccount)) return null;
 

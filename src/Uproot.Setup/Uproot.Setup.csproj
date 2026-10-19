@@ -1,0 +1,42 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Uproot-Setup.exe: one file that installs Uproot for everyone, or updates the installed copy.
+
+    It carries the framework-dependent release zip (Uproot.exe and uproot.com) as an embedded
+    resource, which publish.ps1 passes in as SetupPayload. Built without one, it says so and
+    installs nothing. The installing is Uproot.Core's Installation, the same code the app's
+    Install button runs, so both leave exactly the same thing behind.
+  -->
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UseWPF>true</UseWPF>
+    <LangVersion>latest</LangVersion>
+    <AssemblyName>Uproot-Setup</AssemblyName>
+    <UprootTitle>Uproot setup</UprootTitle>
+    <RootNamespace>Uproot.Setup</RootNamespace>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationIcon>..\Uproot.App\Assets\app.ico</ApplicationIcon>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Uproot.Core\Uproot.Core.csproj" />
+  </ItemGroup>
+
+  <!-- The app's look, linked rather than copied, so the two cannot drift apart. -->
+  <ItemGroup>
+    <Page Include="..\Uproot.App\Theme.xaml" Link="Theme.xaml" />
+    <Page Include="..\Uproot.App\Themes\Dark.xaml" Link="Themes\Dark.xaml" />
+    <Page Include="..\Uproot.App\Themes\Light.xaml" Link="Themes\Light.xaml" />
+    <Resource Include="..\Uproot.App\Assets\app.ico" Link="Assets\app.ico" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(SetupPayload)' != ''">
+    <EmbeddedResource Include="$(SetupPayload)" LogicalName="Uproot.Setup.payload.zip" />
+  </ItemGroup>
+
+</Project>

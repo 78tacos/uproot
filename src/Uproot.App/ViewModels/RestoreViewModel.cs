@@ -25,7 +25,7 @@ public sealed class RestoreViewModel : ObservableObject
         OpenRecycleBinCommand = RelayCommand.Create(() => Open("explorer.exe", "shell:RecycleBinFolder"));
         SelectAllCommand = RelayCommand.Create(() => { foreach (var item in Items.Where(i => i.CanSelect)) item.IsSelected = true; Raise(nameof(SelectedSummary)); });
         SelectNoneCommand = RelayCommand.Create(() => { foreach (var item in Items) item.IsSelected = false; Raise(nameof(SelectedSummary)); });
-        RestartAsAdminCommand = RelayCommand.Create(RestartAsAdministrator, () => !IsElevated);
+        RestartAsAdminCommand = AsyncRelayCommand.Create(RestartAsAdministrator, () => !IsElevated);
     }
 
     public ObservableCollection<RemovalRowViewModel> Removals { get; }
@@ -37,7 +37,7 @@ public sealed class RestoreViewModel : ObservableObject
     public RelayCommand OpenRecycleBinCommand { get; }
     public RelayCommand SelectAllCommand { get; }
     public RelayCommand SelectNoneCommand { get; }
-    public RelayCommand RestartAsAdminCommand { get; }
+    public AsyncRelayCommand RestartAsAdminCommand { get; }
 
     /// <summary>Asked before restoring; the window shows the confirmation.</summary>
     public Func<string, bool>? ConfirmRestore { get; set; }
@@ -211,9 +211,9 @@ public sealed class RestoreViewModel : ObservableObject
         }
     }
 
-    private void RestartAsAdministrator()
+    private async Task RestartAsAdministrator()
     {
-        var outcome = ElevationState.RelaunchAsAdministrator();
+        var outcome = await InstallFlow.RestartAsAdministratorAsync();
         StatusText = outcome.Message;
 
         if (outcome.Started) ExitRequested?.Invoke(this, EventArgs.Empty);
